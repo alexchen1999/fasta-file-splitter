@@ -6,6 +6,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
@@ -43,26 +44,57 @@ public class GenomeFileSplitter {
 			System.out.println("Now splitting file and writing to output");
 			FileWriter out = new FileWriter(file);
 			BufferedWriter w = new BufferedWriter(out);
-			String header = "";
-			for (int i = 0; i < lines.size(); i++) {
-				//distinguish between header and sequence with the '>' symbol
+			String header = lines.get(0);
+			
+			//maps a current header to the next occurrence of header
+			HashMap<Integer, Integer> headers = new HashMap<Integer, Integer>();
+			int previousHeader = 0;
+			
+			//distinguish between header and sequence with the '>' symbol
+			for (int i = 1; i < lines.size(); i++) {
 				if (lines.get(i).charAt(0) == '>') {
-					header = lines.get(i);
-					//Ex: Chromosome >1A becomes >1A1 signaling 1st half of
-					//1A sequence
-					w.write(header.substring(0, 3) + "1" + header.substring(3) + "\n");
-				} else {
-					//split sequence in half
-					String sequence = lines.get(i);
-					String firstHalf = sequence.substring(0, sequence.length()/2);
-					String secondHalf = sequence.substring(sequence.length()/2);
-					w.write(firstHalf + "\n");
-					//Ex: Chromosome >1A becomes >1A2 signaling 2nd half of
-					//1A sequence
-					w.write(header.substring(0, 3) + "2" + header.substring(3) +"\n");
-					w.write(secondHalf + "\n");		
+					headers.put(previousHeader, i);
+					previousHeader = i;
 				}
 			}
+			
+			//put in the last header; split halfway from that line to EOF
+			headers.put(previousHeader, lines.size() - 1);
+			
+			int nextHeaderPosition = 0;
+			int whereToSplit = 0;
+			
+			//loop through and find the next header 
+			for (int i = 0; i < lines.size(); i++) {
+				if (headers.containsKey(i)) {
+					//calculate which line to split at by taking the average line numbers 
+					//of the current header and next header
+					header = lines.get(i);
+					nextHeaderPosition = headers.get(i);
+					whereToSplit = (nextHeaderPosition + i) / 2;
+					
+					//marker for XX1 header
+					w.write(header.substring(0, 3) + "1" + header.substring(3));
+					w.newLine();
+				} else {
+					if (i == whereToSplit) {
+						
+						//write portion of sequence on line as normal
+						w.write(lines.get(i));
+						w.newLine();
+						
+						//marker for XX2 header
+						w.write(header.substring(0, 3) + "2" + header.substring(3));
+						w.newLine();
+					} else {
+						
+						//write portion of sequence on line as normal
+						w.write(lines.get(i));
+						w.newLine();
+					}
+				}
+			}
+			
 			w.close();
 			out.close();
 			
