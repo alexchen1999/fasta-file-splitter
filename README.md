@@ -30,7 +30,7 @@ There are three methods defined in this program: Main, readFile, and splitFile.
  
 RUNTIME COMPLEXITY ANALYSIS
 ---------------------------
-Given that the number of lines in our FASTA file is n, we loop through the entirety of lines in our FASTA file, which takes O(n) time. While doing so, if we find a header, we associate the previously found header position (initialized to 0) to the currently found header's position (recorded/updated by an int count variable). Adding to a HashMap takes expected O(1) time per header found. If there are n lines, and not too many headers, this should take roughly O(n) time.
+Given that the number of lines in our FASTA file is n, we loop through n lines in our FASTA file, which takes O(n) time. While doing so, if we find a header, we associate the previously found header position (initialized to 0) to the currently found header's position (recorded/updated by an int count variable). Adding to a HashMap takes expected O(1) time per header found. If there are n lines, and not too many headers, this should take roughly O(n) time.
 
 Then, we loop again through every line of our input file, and writing each line one by one to the output file. If we encounter a header, we write a >XX1 header, indicating that we are beginning to write the first half of the DNA sequence. The time complexity of write is O(s) where s is the number of characters in the line the program is currently writing, but since all the lines in a FASTA file are <80 characters we can treat O(s) as constant. 
 
