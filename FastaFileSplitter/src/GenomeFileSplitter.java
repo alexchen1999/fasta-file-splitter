@@ -10,7 +10,6 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Scanner;
 
 public class GenomeFileSplitter {
@@ -63,11 +62,7 @@ public class GenomeFileSplitter {
 		System.out.println("Successfully read all lines of file at " + dateFormat.format(date));
 		System.out.println("Number of lines read in file: " + numLines);
 		System.out.println("Number of headers (>) found in file: " + headers.size()); 
-		System.out.println(headers);
 		System.out.println("Number of sequences found in file: " + sequenceLengths.size());
-		for (int i = 0; i < sequenceLengths.size(); i++) {
-			System.out.println("Sequence " + (i + 1) + " length: " + sequenceLengths.get(i));
-		}
 	}
 	
 	//Split chromosome XX into XX1 and XX2 with appropriate headers and sequences.
@@ -97,27 +92,26 @@ public class GenomeFileSplitter {
 			FileWriter loc = new FileWriter(splitLines);
 			BufferedWriter writeSplitLinePositions = new BufferedWriter(loc);
 			
-			int nextHeaderPosition = 0;
 			int whereToSplit = 0;
-			//
-			int i = 0;
+			int currentArrayIndex = 0;
+			int currNumBases = 0;
+			int currentLine = 0;
 			
 			while (scan.hasNextLine()) {
 				line = scan.nextLine();
-				if (i == numLines / 2) {
+				if (currentLine == numLines / 2) {
 					DateFormat dateFormatHalfway = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 					Date dateHalfway = new Date();
 					System.out.println("Halfway done splitting the file at: " + 
 							dateFormatHalfway.format(dateHalfway));
 				}
 				
-				if (headers.containsKey(i)) {
+				if (headers.containsKey(currentLine)) {
 					//calculate which line to split at by taking the average line numbers 
 					//of the current header and next header
 					header = line;
 					System.out.println("Found header: " + header);
-					nextHeaderPosition = headers.get(i);
-					whereToSplit = (nextHeaderPosition + i) / 2;
+					whereToSplit = sequenceLengths.get(currentArrayIndex) / 2;
 					
 					//marker for XX1 header
 					String[] contents = header.split(":");
@@ -127,14 +121,20 @@ public class GenomeFileSplitter {
 					String newHeader = newFirst + ":" + contents[1] + ":" + contents[2] +
 							":" + newFourth + ":" + contents[4] + ":" + newSixth + ":" +
 							contents[6];
-					System.out.println(newHeader);
+					System.out.println("Created new header: " + newHeader);
 					w.write(newHeader);
 					w.newLine();
+					currNumBases = 0;
+					if (currentLine != 0) {
+						currentArrayIndex++;
+					}
 				} else {
-					if (i == whereToSplit) {
+					if (currNumBases >= whereToSplit && currNumBases - whereToSplit <= 60) {
+						String firstHalf = line.substring(0, (currNumBases - whereToSplit));
+						String secondHalf = line.substring((currNumBases - whereToSplit));
 						
 						//write portion of sequence on line as normal
-						w.write(line);
+						w.write(firstHalf);
 						w.newLine();
 						
 						//marker for XX2 header
@@ -146,26 +146,27 @@ public class GenomeFileSplitter {
 								":" + newFourth + ":" + contents[4] + ":" + newSixth + ":" +
 								contents[6];
 						w.write(newHeader);
-						System.out.println(newHeader);
+						System.out.println("Created new header: " + newHeader);
 						DateFormat dateFormatSplitHeader = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 						Date dateSplitHeader = new Date();
 						System.out.println("We have split chromosome " + header.substring(1, 3) + 
-								" at line " + whereToSplit + " at: " + 
-								dateFormatSplitHeader.format(dateSplitHeader));						
+								" at index " + whereToSplit + " at: " + 
+								dateFormatSplitHeader.format(dateSplitHeader));	
+						w.newLine();
+						w.write(secondHalf);
 						w.newLine();
 						
 						//write position of split to split lines file
 						writeSplitLinePositions.write("" + whereToSplit);
 						writeSplitLinePositions.newLine();
-						
 					} else {
-						
 						//write portion of sequence on line as normal
 						w.write(line);
 						w.newLine();
 					}
+					currNumBases += line.length();
 				}				
-				i++;
+				currentLine++;
 			}
 			
 			//close all input/output writers/streams	
