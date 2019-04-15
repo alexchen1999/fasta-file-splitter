@@ -17,6 +17,7 @@ public class GenomeFileSplitter {
 
 	//maps a current header to the next occurrence of header
 	public static HashMap<Integer, Integer> headers = new HashMap<Integer, Integer>();
+	public static ArrayList<Integer> sequenceLengths = new ArrayList<Integer>();
 	static int numLines = 0;
 	
 	//reads in FASTA file line by line and generates a HashMap that maps
@@ -29,20 +30,27 @@ public class GenomeFileSplitter {
 			BufferedReader r = new BufferedReader(in);
 			Scanner scan = new Scanner(r);
 			String line;
+			int currSeqLength = 0;
 			int countLineNo = 0;
 			int previousHeader = 0;
 			while (scan.hasNextLine()) {
 				line = scan.nextLine();
-				
 				//distinguish between header and sequence with the '>' symbol
 				if (line.charAt(0) == '>') {
 					headers.put(previousHeader, countLineNo);
 					previousHeader = countLineNo;
+					if (currSeqLength != 0) {
+						sequenceLengths.add(currSeqLength);
+						currSeqLength = 0;
+					}
+				} else {
+					currSeqLength += line.length();
 				}
 				countLineNo++;
 			}
 			//put in the last header; split halfway from that line to EOF
 			headers.put(previousHeader, countLineNo - 1);
+			sequenceLengths.add(currSeqLength);
 			numLines = countLineNo;
 			scan.close();
 		} catch (FileNotFoundException e) {
@@ -56,8 +64,11 @@ public class GenomeFileSplitter {
 		System.out.println("Number of lines read in file: " + numLines);
 		System.out.println("Number of headers (>) found in file: " + headers.size()); 
 		System.out.println(headers);
+		System.out.println("Number of sequences found in file: " + sequenceLengths.size());
+		for (int i = 0; i < sequenceLengths.size(); i++) {
+			System.out.println("Sequence " + (i + 1) + " length: " + sequenceLengths.get(i));
+		}
 	}
-	
 	
 	//Split chromosome XX into XX1 and XX2 with appropriate headers and sequences.
 	public static void splitFile(File originalFile, File writeFile) {
@@ -88,6 +99,7 @@ public class GenomeFileSplitter {
 			
 			int nextHeaderPosition = 0;
 			int whereToSplit = 0;
+			//
 			int i = 0;
 			
 			while (scan.hasNextLine()) {
@@ -108,7 +120,15 @@ public class GenomeFileSplitter {
 					whereToSplit = (nextHeaderPosition + i) / 2;
 					
 					//marker for XX1 header
-					w.write(header.substring(0, 3) + "1" + header.substring(3));
+					String[] contents = header.split(":");
+					String newFirst = contents[0].substring(0, 3) + "1" + contents[0].substring(3);
+					String newFourth = contents[3] + "1";
+					String newSixth = "" + Integer.parseInt(contents[5]) / 2;
+					String newHeader = newFirst + ":" + contents[1] + ":" + contents[2] +
+							":" + newFourth + ":" + contents[4] + ":" + newSixth + ":" +
+							contents[6];
+					System.out.println(newHeader);
+					w.write(newHeader);
 					w.newLine();
 				} else {
 					if (i == whereToSplit) {
@@ -118,7 +138,15 @@ public class GenomeFileSplitter {
 						w.newLine();
 						
 						//marker for XX2 header
-						w.write(header.substring(0, 3) + "2" + header.substring(3));
+						String[] contents = header.split(":");
+						String newFirst = contents[0].substring(0, 3) + "2" + contents[0].substring(3);
+						String newFourth = contents[3] + "2";
+						String newSixth = "" + Integer.parseInt(contents[5]) / 2;
+						String newHeader = newFirst + ":" + contents[1] + ":" + contents[2] +
+								":" + newFourth + ":" + contents[4] + ":" + newSixth + ":" +
+								contents[6];
+						w.write(newHeader);
+						System.out.println(newHeader);
 						DateFormat dateFormatSplitHeader = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 						Date dateSplitHeader = new Date();
 						System.out.println("We have split chromosome " + header.substring(1, 3) + 
