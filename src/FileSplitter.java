@@ -111,7 +111,7 @@ public class FileSplitter {
 			BufferedWriter w = new BufferedWriter(out);
 
 			// Variables to store
-			int splitPoint = 0, headerNumber = 0, currentSequenceLength = 0;
+			int splitPoint = 0, headerNumber = 0, currentSequenceLength = 0, offset = 0;
 
 			// store current header, unprocessed
 			String currentHeader = "";
@@ -124,10 +124,14 @@ public class FileSplitter {
 				System.out.println("current line: " + line);
 				if (headers.containsKey(line)) {
 					currentHeader = line;
-
 					splitPoint = sequenceLengths.get(headerNumber) / 2;
 					headerNumber++;
 					System.out.println("Split point: " + splitPoint);
+
+					// Print ChrX_1 header on a new line aside from the first one
+					if (headers.get(currentHeader) != 0) {
+						w.newLine();
+					}
 
 					// Write ChrX_1 header.
 					String newHeader = generateBisectedHeader(currentHeader, true);
@@ -156,9 +160,9 @@ public class FileSplitter {
 						w.newLine();
 
 						// Write second portion of current line.
-						if (secondPartOfCurrentLine.length() > 0) {
+						offset = secondPartOfCurrentLine.length();
+						if (offset > 0) {
 							w.write(secondPartOfCurrentLine);
-							w.newLine();
 						}
 
 						// Reset current sequence length -- we have passed the split point and are now writing the second half of the
@@ -166,10 +170,21 @@ public class FileSplitter {
 						currentSequenceLength = 0;
 						secondHeaderCreated = true;
 					} else {
-						// Current line is not split -- write current line as normal.
-						System.out.println("printed");
-						w.write(line);
-						w.newLine();
+						if (secondHeaderCreated) {
+							int lineLen = line.length();
+							for (int i = 0; i < lineLen; i++) {
+								if (i == lineLen - offset) {
+									w.newLine();
+								} else {
+									w.write(line.charAt(i));
+								}
+							}
+						} else {
+							// Current line is not split -- write current line as normal.
+							System.out.println("printed");
+							w.write(line);
+							w.newLine();
+						}
 					}
 				}				
 			}
